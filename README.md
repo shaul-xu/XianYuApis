@@ -3,6 +3,7 @@
 [![Python Version](https://img.shields.io/badge/python-3.7%2B-blue)](https://www.python.org/)
 [![Python Version](https://img.shields.io/badge/nodejs-18%2B-blue)](https://nodejs.org/zh-cn/)
 
+**🚀 本项目为打造咸鱼托管AI客服提供基础，严禁用于发布不良信息、违法内容！**
 **✨ 非官方闲鱼开放API接口封装库，通过网络请求操作所有的闲鱼操作，提供安全可靠的闲鱼平台功能访问能力。**
 **⚠️ 注意：如有侵权联系作者删除。**
 
@@ -15,7 +16,6 @@
 
 ## 🚀 一些成品
 - https://github.com/shaxiu/XianyuAutoAgent
-
 
 
 
@@ -43,12 +43,12 @@ npm install
 
 ### 🚀运行项目
 ```
-python XianyuAutoAsync.py
+python goofish_live.py
 ```
 
 ### 🗝️注意事项
-- XianyuAutoAsync.py中的代码是接收发消息的主入口，可以根据自己的需求进行修改
-- XianyuApis.py中的代码包含了api接口的模板，sign参数已经解密，可以根据自己的需求进行修改，添加其他的接口
+- goofish_live.py中的代码是接收发消息的主入口，可以根据自己的需求进行修改
+- goofish_apis.py中的代码包含了api接口的模板，sign参数已经解密，可以根据自己的需求进行修改，添加其他的接口
 
 
 ## 🧸额外说明

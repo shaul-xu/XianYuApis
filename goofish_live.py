@@ -331,14 +331,17 @@ class XianyuLive:
                         reply = f'{send_user_name} 说了: {send_message}'
                         cid = message["1"]["2"]
                         cid = cid.split('@')[0]
+
+                        # 回复文字
                         await self.send_msg(websocket, cid, send_user_id, make_text(reply))
 
-                        res_json = self.xianyu.upload_media(r"D:\Desktop\1.png")
-                        image_object = res_json["object"]
-                        width, height = map(int, image_object["pix"].split('x'))
-                        await self.send_msg(websocket, cid, send_user_id, make_image(image_object["url"], width, height))
+                        # 回复图片
+                        # res_json = self.xianyu.upload_media(r"D:\Desktop\1.png")
+                        # image_object = res_json["object"]
+                        # width, height = map(int, image_object["pix"].split('x'))
+                        # await self.send_msg(websocket, cid, send_user_id, make_image(image_object["url"], width, height))
                 except Exception as e:
-                    logger.error(f'2 {e}')
+                    logger.error(f'[Main Thread] {e}')
 
 
 
