@@ -1,13 +1,15 @@
 import base64
 import json
 import asyncio
+import threading
 import time
 
 from loguru import logger
 import websockets
 from goofish_apis import XianyuApis
 
-from utils.goofish_utils import generate_mid, generate_uuid, trans_cookies, generate_device_id, decrypt
+from utils.goofish_utils import generate_mid, generate_uuid, trans_cookies, generate_device_id, decrypt, \
+    get_session_cookies_str
 from message import Message, make_text, make_image
 
 
@@ -23,7 +25,7 @@ class XianyuLive:
 
     async def list_all_conversations(self, cid):
         headers = {
-            "Cookie": self.cookies_str,
+            "Cookie": get_session_cookies_str(self.xianyu.session),
             "Host": "wss-goofish.dingtalk.com",
             "Connection": "Upgrade",
             "Pragma": "no-cache",
@@ -239,7 +241,7 @@ class XianyuLive:
 
     async def send_msg_once(self, toid, item_id, send_message: Message):
         headers = {
-            "Cookie": self.cookies_str,
+            "Cookie": get_session_cookies_str(self.xianyu.session),
             "Host": "wss-goofish.dingtalk.com",
             "Connection": "Upgrade",
             "Pragma": "no-cache",
@@ -275,9 +277,14 @@ class XianyuLive:
             await ws.send(json.dumps(msg))
             await asyncio.sleep(15)
 
+    def user_alive(self):
+        while True:
+            time.sleep(600)
+            self.xianyu.refresh_token()
+
     async def main(self):
         headers = {
-            "Cookie": self.cookies_str,
+            "Cookie": get_session_cookies_str(self.xianyu.session),
             "Host": "wss-goofish.dingtalk.com",
             "Connection": "Upgrade",
             "Pragma": "no-cache",
@@ -287,63 +294,61 @@ class XianyuLive:
             "Accept-Encoding": "gzip, deflate, br, zstd",
             "Accept-Language": "zh-CN,zh;q=0.9",
         }
+        threading.Thread(target=self.user_alive).start()
         async with websockets.connect(self.base_url, extra_headers=headers) as websocket:
             asyncio.create_task(self.init(websocket))
             asyncio.create_task(self.heart_beat(websocket))
             async for message in websocket:
                 # logger.info(f"message: {message}")
-                try:
-                    message = json.loads(message)
-                    ack = {
-                        "code": 200,
-                        "headers": {
-                            "mid": message["headers"]["mid"] if "mid" in message["headers"] else generate_mid(),
-                            "sid": message["headers"]["sid"] if "sid" in message["headers"] else '',
-                        }
+                message = json.loads(message)
+                ack = {
+                    "code": 200,
+                    "headers": {
+                        "mid": message["headers"]["mid"] if "mid" in message["headers"] else generate_mid(),
+                        "sid": message["headers"]["sid"] if "sid" in message["headers"] else '',
                     }
-                    if 'app-key' in message["headers"]:
-                        ack["headers"]["app-key"] = message["headers"]["app-key"]
-                    if 'ua' in message["headers"]:
-                        ack["headers"]["ua"] = message["headers"]["ua"]
-                    if 'dt' in message["headers"]:
-                        ack["headers"]["dt"] = message["headers"]["dt"]
-                    await websocket.send(json.dumps(ack))
-                except Exception as e:
-                    pass
+                }
+                if 'app-key' in message["headers"]:
+                    ack["headers"]["app-key"] = message["headers"]["app-key"]
+                if 'ua' in message["headers"]:
+                    ack["headers"]["ua"] = message["headers"]["ua"]
+                if 'dt' in message["headers"]:
+                    ack["headers"]["dt"] = message["headers"]["dt"]
+                await websocket.send(json.dumps(ack))
 
-                try:
-                    data = message["body"]["syncPushPackage"]["data"][0]["data"]
-                    logger.info(f"message: {data}")
-                    try:
-                        data = json.loads(data)
-                        logger.info(f"无需解密 message: {data}")
-                    except Exception as e:
-                        logger.error(f'1 {e}')
-                        data = decrypt(data)
-                        message = json.loads(data)
-                        logger.info(f"message: {message}")
+                await self.handle_message(message, websocket)
 
-                        send_user_name = message["1"]["10"]["reminderTitle"]
-                        send_user_id = message["1"]["10"]["senderUserId"]
-                        send_message = message["1"]["10"]["reminderContent"]
-                        logger.info(f"user: {send_user_name}, 发送给我的信息 message: {send_message}")
-                        # reply = f'Hello, {send_user_name}! I am a robot. I am not available now. I will reply to you later.'
-                        reply = f'{send_user_name} 说了: {send_message}'
-                        cid = message["1"]["2"]
-                        cid = cid.split('@')[0]
+    async def handle_message(self, message, websocket):
+        try:
+            data = message["body"]["syncPushPackage"]["data"][0]["data"]
+            data = json.loads(data)
+            # logger.info(f"无需解密 message: {data}")
+        except Exception as e:
+            try:
+                data = decrypt(data)
+                message = json.loads(data)
+                # logger.info(f"解密的 message: {message}")
 
-                        # 回复文字
-                        await self.send_msg(websocket, cid, send_user_id, make_text(reply))
+                send_user_name = message["1"]["10"]["reminderTitle"]
+                send_user_id = message["1"]["10"]["senderUserId"]
+                send_message = message["1"]["10"]["reminderContent"]
+                logger.info(f"user: {send_user_name}, 发送给我的信息 message: {send_message}")
 
-                        # 回复图片
-                        # res_json = self.xianyu.upload_media(r"D:\Desktop\1.png")
-                        # image_object = res_json["object"]
-                        # width, height = map(int, image_object["pix"].split('x'))
-                        # await self.send_msg(websocket, cid, send_user_id, make_image(image_object["url"], width, height))
-                except Exception as e:
-                    logger.error(f'[Main Thread] {e}')
+                cid = message["1"]["2"]
+                cid = cid.split('@')[0]
 
+                # 回复文字
+                # reply = f'Hello, {send_user_name}! I am a robot. I am not available now. I will reply to you later.'
+                reply = f'{send_user_name} 说了: {send_message}'
+                await self.send_msg(websocket, cid, send_user_id, make_text(reply))
 
+                # 回复图片
+                # res_json = self.xianyu.upload_media(r"D:\Desktop\1.png")
+                # image_object = res_json["object"]
+                # width, height = map(int, image_object["pix"].split('x'))
+                # await self.send_msg(websocket, cid, send_user_id, make_image(image_object["url"], width, height))
+            except Exception as e:
+                pass
 
 
 if __name__ == '__main__':
@@ -351,8 +356,8 @@ if __name__ == '__main__':
     xianyuLive = XianyuLive(cookies_str)
 
     # 1 主动发送一次消息
-    to_id = '2202640918079'
-    item_id = '897742748011'
+    # to_id = '2202640918079'
+    # item_id = '897742748011'
     # choice 1
     # asyncio.run(xianyuLive.send_msg_once(to_id, item_id, make_text('Hello, this is an active message!')))
     # choice 2
@@ -362,10 +367,10 @@ if __name__ == '__main__':
     # asyncio.run(xianyuLive.send_msg_once(to_id, item_id, make_image(res_json["object"]["url"], width, height)))
 
     # 2 获取全部聊天记录
-    cid = '47812870000'
-    all_messages = asyncio.run(xianyuLive.list_all_conversations(cid))
-    for message in all_messages:
-        print(message)
+    # cid = '47812870000'
+    # all_messages = asyncio.run(xianyuLive.list_all_conversations(cid))
+    # for message in all_messages:
+    #     print(message)
 
     # 3 常驻进程 用于接收消息和自动回复
-    # asyncio.run(xianyuLive.main())
+    asyncio.run(xianyuLive.main())

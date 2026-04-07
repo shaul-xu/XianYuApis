@@ -22,6 +22,22 @@ def trans_cookies(cookies_str):
             continue
     return cookies
 
+def trans_cookies_str(cookies_dict):
+    cookies_str = ''
+    for key, value in cookies_dict.items():
+        cookies_str += f"{key}={value}; "
+    return cookies_str[:-2]
+
+def get_session_cookies(session):
+    cookies = session.cookies.get_dict()
+    return cookies
+
+def get_session_cookies_str(session):
+    cookies = session.cookies.get_dict()
+    cookies_str = ''
+    for key, value in cookies.items():
+        cookies_str += f"{key}={value}; "
+    return cookies_str[:-2]
 
 def generate_mid():
     mid = xianyu_js.call('generate_mid')
