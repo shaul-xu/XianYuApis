@@ -3,7 +3,6 @@
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
 [![Node.js](https://img.shields.io/badge/node.js-18%2B-green)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/license-MIT-orange)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/cv-cat/XianYuApis?style=social)](https://github.com/cv-cat/XianYuApis)
 
 > **在 AI 大模型爆发的时代，每一个闲鱼卖家都值得拥有一个 7×24 小时不下线的智能客服。**
 > 本项目封装了闲鱼平台完整的消息通信能力，为开发者构建 AI 客服智能体提供可靠、稳定的底层 API 支撑。
