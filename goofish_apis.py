@@ -65,7 +65,7 @@ class XianyuApis:
         token = self.session.cookies['_m_h5_tk'].split('_')[0]
         sign = generate_sign(params['t'], token, data_val)
         params['sign'] = sign
-        response = self.session.post(self.login_url, params=params, headers=headers, data=data, verify=False)
+        response = self.session.post(self.login_url, params=params, headers=headers, data=data)
         for response_cookie_key in response.cookies.get_dict().keys():
             if response_cookie_key in self.session.cookies.get_dict().keys():
                 for key in self.session.cookies:
@@ -156,7 +156,7 @@ class XianyuApis:
             files = {
                 "file": (media_name, f, "image/png")
             }
-            response = self.session.post(self.upload_media_url, headers=headers, params=params, files=files, verify=False)
+            response = self.session.post(self.upload_media_url, headers=headers, params=params, files=files)
             res_json = response.json()
             return res_json
 
